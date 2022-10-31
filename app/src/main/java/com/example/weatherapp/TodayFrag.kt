@@ -1,12 +1,16 @@
 package com.example.weatherapp
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.android.volley.Request
@@ -17,15 +21,18 @@ import com.squareup.picasso.Picasso
 import org.json.JSONObject
 
 const val API = "8f55e87ff1e7424696075013221910"
+const val PREF = "Table"
+const val KEY = "key"
 
 class TodayFrag : Fragment() {
     private lateinit var binding: FragmentTodayBinding
     private val model: MainViewModel by activityViewModels()
     private lateinit var adapter: RvAdapter
-    private var city = "Moscow"
+    private var city:String = ""
+    private lateinit var pref : SharedPreferences
     private lateinit var pLauncher: ActivityResultLauncher<String>
-
-    val eng = listOf("Sunny",
+    val eng = listOf(
+        "Sunny",
         "Clear",
         "Partly cloudy",
         "Cloudy",
@@ -73,9 +80,11 @@ class TodayFrag : Fragment() {
         "Patchy light rain with thunder",
         "Moderate or heavy rain with thunder",
         "Patchy light snow with thunder",
-        "Moderate or heavy snow with thunder")
+        "Moderate or heavy snow with thunder"
+    )
 
-    val rus = listOf(" Солнечно",
+    val rus = listOf(
+        " Солнечно",
         "Ясно",
         "Переменная облачность",
         "Облачно",
@@ -123,8 +132,8 @@ class TodayFrag : Fragment() {
         "Небольшой дождь с громом",
         "Сильный дождь с громом",
         "Небольшой снег с громом",
-        "Сильный снег с громом")
-
+        "Сильный снег с громом"
+    )
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -132,10 +141,17 @@ class TodayFrag : Fragment() {
     ): View? {
         binding = FragmentTodayBinding.inflate(inflater, container, false)
         return binding.root
+
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        pref = this.activity?.getSharedPreferences(PREF,Context.MODE_PRIVATE) ?: return
+        city = pref.getString(KEY,"Moscow").toString()
         initRv()
         requestWeather(city)
 
@@ -144,13 +160,13 @@ class TodayFrag : Fragment() {
             DialogManager.search(requireContext(), object : DialogManager.Listener {
                 override fun onClick(name: String) {
                     city = name
+                    pref.edit().putString(KEY,city).apply()
                     requestWeather(city)
                 }
 
             })
         }
     }
-
 
 
     //инициализация RecycleView
@@ -171,18 +187,22 @@ class TodayFrag : Fragment() {
         model.liveDataNow.observe(viewLifecycleOwner) {
             binding.tvLocation.text = city
             var date: String = it.date.substring(10, 16)
-            Toast.makeText(activity, "${getString(R.string.updated_time)} $date", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                activity,
+                "${getString(R.string.updated_time)} $date",
+                Toast.LENGTH_SHORT
+            ).show()
 
             binding.tvTemp.text = it.temp.toFloat().toInt().toString() + "°C"
             var i = 0
-            for (i in 0 until eng.size-1){
-                if (it.conditions.equals(eng[i])){
+            for (i in 0 until eng.size - 1) {
+                if (it.conditions.equals(eng[i])) {
                     binding.tvConditions.text = rus[i]
                 }
             }
-            binding.tvWind.text = (it.wind.toFloat()/3.6).toInt().toString()+" м/с"
-            binding.tvHum2.text = it.hum+" %"
-            var pres = ((it.pressure.toFloat() * 736.1)/1000).toInt().toString()
+            binding.tvWind.text = (it.wind.toFloat() / 3.6).toInt().toString() + " м/с"
+            binding.tvHum2.text = it.hum + " %"
+            var pres = ((it.pressure.toFloat() * 736.1) / 1000).toInt().toString()
             binding.pressure.text = "Атмосферное давление: $pres мм рт.cт."
             //binding.tvConditions.text = it.conditions
             Picasso.get().load("https:" + it.img).into(binding.imToday)
@@ -244,7 +264,8 @@ class TodayFrag : Fragment() {
                 day.getString("date"),
                 day.getJSONObject("day").getString("mintemp_c"),
                 day.getJSONObject("day").getString("maxtemp_c"),
-            "","","")
+                "", "", ""
+            )
             list.add(item)
         }
         model.liveDataList.value = list
