@@ -30,109 +30,69 @@ class TodayFrag : Fragment() {
     private lateinit var adapter: RvAdapter
     private var city:String = ""
     private lateinit var pref : SharedPreferences
+    lateinit var mainObj:JSONObject
     private lateinit var pLauncher: ActivityResultLauncher<String>
-    val eng = listOf(
-        "Sunny",
-        "Clear",
-        "Partly cloudy",
-        "Cloudy",
-        "Overcast",
-        "Mist",
-        "Patchy rain possible",
-        "Patchy snow possible",
-        "Patchy sleet possible",
-        "Patchy freezing drizzle possible",
-        "Thundery outbreaks possible",
-        "Blowing snow",
-        "Blizzard",
-        "Fog",
-        "Freezing fog",
-        "Patchy light drizzle",
-        "Light drizzle",
-        "Freezing drizzle",
-        "Heavy freezing drizzle",
-        "Patchy light rain",
-        "Light rain",
-        "Moderate rain at times",
-        "Moderate rain",
-        "Heavy rain at times",
-        "Heavy rain",
-        "Light freezing rain",
-        "Moderate or heavy freezing rain",
-        "Light sleet",
-        "Moderate or heavy sleet",
-        "Patchy light snow",
-        "Light snow",
-        "Patchy moderate snow",
-        "Moderate snow",
-        "Patchy heavy snow",
-        "Heavy snow",
-        "Ice pellets",
-        "Light rain shower",
-        "Moderate or heavy rain shower",
-        "Torrential rain shower",
-        "Light sleet showers",
-        "Moderate or heavy sleet showers",
-        "Light snow showers",
-        "Moderate or heavy snow showers",
-        "Light showers of ice pellets",
-        "Moderate or heavy showers of ice pellets",
-        "Patchy light rain with thunder",
-        "Moderate or heavy rain with thunder",
-        "Patchy light snow with thunder",
-        "Moderate or heavy snow with thunder"
-    )
+    var longitude:Float = 0.0F
+    var latitude:Float = 0.0F
 
+    val eng = listOf(
+        "0",
+        "1",
+        "2",
+        "3",
+        "45",
+        "48",
+        "51",
+        "53",
+        "55",
+        "56",
+        "57",
+        "61",
+        "63",
+        "65",
+        "66",
+        "67",
+        "71",
+        "73",
+        "75",
+        "77",
+        "80",
+        "81",
+        "82",
+        "85",
+        "86",
+        "95",
+        "96",
+        "99")
     val rus = listOf(
-        " Солнечно",
         "Ясно",
+        "Преимущественно ясно",
         "Переменная облачность",
-        "Облачно",
         "Пасмурно",
-        "Туман",
-        "Кратковременный дождь",
-        "Кратковременный снег",
-        "Кратковременный мокрый снег",
-        "Кратковременный моросящий дождь",
-        "Вспышки грома",
-        "Метель",
-        "Метель",
         "Туман",
         "Морозный туман",
         "Легкий дождь",
+        "Умеренный дождь",
+        "Сильный дождь",
+        "Моросящий дождь",
+        "Моросящий дождь",
         "Легкий дождь",
-        "Морозный дождь",
-        "Сильный дождь",
-        "Неравномерный легкий дождь",
-        "Небольшой дождь",
         "Умеренный дождь",
-        "Умеренный дождь",
-        "Сильный дождь",
         "Сильный дождь",
         "Ледяной дождь",
         "Ледяной дождь",
-        "Мокрый снег",
-        "Мокрый снег",
-        "Небольшой снег",
-        "Небольшой снег",
-        "Умеренный снег",
-        "Умеренный снег",
-        "Сильный снег",
-        "Сильный снег",
+        "Возможен снег",
+        "Снег",
+        "Сильный снегопад",
         "Град",
-        "Легкий ливень",
+        "Возможен ливень",
         "Умеренный ливень",
-        "Проливной дождь",
-        "Дождь с мокрым снегом",
-        "Сильный дождь со снегом",
+        "Сильный ливень",
         "Снежный дождь",
-        "Сильный снежный дождь",
-        "Легкий град",
-        "Сильный град",
-        "Небольшой дождь с громом",
-        "Сильный дождь с громом",
-        "Небольшой снег с громом",
-        "Сильный снег с громом"
+        "Снежный дождь",
+        "Гроза",
+        "Гроза",
+        "Гроза"
     )
 
     override fun onCreateView(
@@ -141,7 +101,6 @@ class TodayFrag : Fragment() {
     ): View? {
         binding = FragmentTodayBinding.inflate(inflater, container, false)
         return binding.root
-
     }
 
     override fun onDestroy() {
@@ -153,7 +112,8 @@ class TodayFrag : Fragment() {
         pref = this.activity?.getSharedPreferences(PREF,Context.MODE_PRIVATE) ?: return
         city = pref.getString(KEY,"Moscow").toString()
         initRv()
-        requestWeather(city)
+        geocoding(city)
+        //requestWeather(city)
 
         //кнопка выбора местоположения
         binding.btnLocation.setOnClickListener {
@@ -161,7 +121,7 @@ class TodayFrag : Fragment() {
                 override fun onClick(name: String) {
                     city = name
                     pref.edit().putString(KEY,city).apply()
-                    requestWeather(city)
+                    geocoding(city)
                 }
 
             })
@@ -173,7 +133,7 @@ class TodayFrag : Fragment() {
     private fun initRv() = with(binding) {
         holder.layoutManager =
                 //делаем RecycleView горизонтальным
-            LinearLayoutManager(activity, LinearLayoutManager.HORIZONTAL, false)
+            LinearLayoutManager(activity, LinearLayoutManager.VERTICAL, false)
         adapter = RvAdapter()
         holder.adapter = adapter
         //Получение данных в RcView
@@ -184,14 +144,10 @@ class TodayFrag : Fragment() {
 
     //обновление данных из weatherNow
     private fun updateCurrent() {
+        binding.tvLocation.text = city
         model.liveDataNow.observe(viewLifecycleOwner) {
-            binding.tvLocation.text = city
-            var date: String = it.date.substring(10, 16)
-            Toast.makeText(
-                activity,
-                "${getString(R.string.updated_time)} $date",
-                Toast.LENGTH_SHORT
-            ).show()
+           // var date: String = it.date.substring(10, 16)
+            Toast.makeText(activity, "Данные обновлены", Toast.LENGTH_SHORT).show()
 
             binding.tvTemp.text = it.temp.toFloat().toInt().toString() + "°C"
             var i = 0
@@ -200,18 +156,46 @@ class TodayFrag : Fragment() {
                     binding.tvConditions.text = rus[i]
                 }
             }
-            binding.tvWind.text = (it.wind.toFloat() / 3.6).toInt().toString() + " м/с"
-            binding.tvHum2.text = it.hum + " %"
-            var pres = ((it.pressure.toFloat() * 736.1) / 1000).toInt().toString()
-            binding.pressure.text = "Атмосферное давление: $pres мм рт.cт."
+            var wind = mainObj.getJSONObject("current_weather").getString("windspeed")
+            binding.tvWind.text = wind.toFloat().toInt().toString() + " м/с"
+            val hourArr = mainObj.getJSONObject("hourly").getJSONArray("time")
+            val humArr = mainObj.getJSONObject("hourly").getJSONArray("relativehumidity_2m")
+            val presArr = mainObj.getJSONObject("hourly").getJSONArray("surface_pressure")
+            var date = mainObj.getJSONObject("current_weather").getString("time")
+            //Log.d("My",hourArr.toString())
+            for (i in 0 until hourArr.length()-1){
+                if (date.equals(hourArr[i])){
+                    binding.tvHum2.text = humArr[i].toString() + " %"
+                    var pres = ((presArr[i].toString().toFloat() * 736.1) / 1000).toInt().toString()
+                    binding.pressure.text = "Атмосферное давление: $pres мм рт.cт."
+                }
+            }
             //binding.tvConditions.text = it.conditions
-            Picasso.get().load("https:" + it.img).into(binding.imToday)
+            //Picasso.get().load("https:" + it.img).into(binding.imToday)
         }
     }
 
+    private fun geocoding(city: String){
+        val geoUrl = "https://geocoding-api.open-meteo.com/v1/search?name=$city&count=1&language=ru"
+        val queue = Volley.newRequestQueue(context)
+        val request = StringRequest(
+            Request.Method.GET,             //при успешном ответе - парсим данные
+            geoUrl, { result ->
+                var geoObj = JSONObject(result)
+                latitude = geoObj.getJSONArray("results").getJSONObject(0).getString("latitude").toFloat()
+                longitude = geoObj.getJSONArray("results").getJSONObject(0).getString("longitude").toFloat()
+                Log.d("My","lat=$latitude and long=$longitude")
+                requestWeather(latitude,longitude)
+            },
+            { error ->                      // при ошибке показываем код ошибки
+                Toast.makeText(context, "Error \nTry again", Toast.LENGTH_SHORT).show()
+            })
+        queue.add(request)
+    }
+
     //Получаем данные с сервера
-    private fun requestWeather(city: String) {
-        val url = "https://api.weatherapi.com/v1/forecast.json?key=$API&q=$city&days=8"
+    private fun requestWeather(latitude:Float,longitude:Float) {
+        val url = "https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&hourly=temperature_2m,relativehumidity_2m,apparent_temperature,weathercode,surface_pressure,windspeed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&current_weather=true&windspeed_unit=ms&timezone=auto"
         val queue = Volley.newRequestQueue(context)
         val request = StringRequest(
             Request.Method.GET,             //при успешном ответе - парсим данные
@@ -228,22 +212,25 @@ class TodayFrag : Fragment() {
     //парсим результат
     private fun parseWeatherData(result: String) {
         val mainObject = JSONObject(result)
+        mainObj = JSONObject(result)
         val list = parseForecast(mainObject)
         parseCurrentDay(mainObject, list[0])
     }
 
     //Получение данных по текущей погоде
     private fun parseCurrentDay(mainObject: JSONObject, weatherItem: WeatherNow) {
+    //private fun parseCurrentDay(mainObject: JSONObject,weatherItem:List<WeatherNow>) {
         val item = WeatherNow(
-            mainObject.getJSONObject("location").getString("name"),
-            mainObject.getJSONObject("current").getString("temp_c"),
-            mainObject.getJSONObject("current").getJSONObject("condition").getString("text"),
-            mainObject.getJSONObject("current").getJSONObject("condition").getString("icon"),
-            mainObject.getJSONObject("current").getString("last_updated"),
-            weatherItem.maxTemp, weatherItem.minTemp,
-            mainObject.getJSONObject("current").getString("wind_kph"),
-            mainObject.getJSONObject("current").getString("humidity"),
-            mainObject.getJSONObject("current").getString("pressure_mb")
+            city,
+            mainObject.getJSONObject("current_weather").getString("temperature"),
+            weatherItem.conditions,
+            "",
+            weatherItem.date,
+            weatherItem.minTemp,
+            weatherItem.maxTemp,
+            "",
+            "",
+            ""
         )
         model.liveDataNow.value = item
     }
@@ -251,19 +238,23 @@ class TodayFrag : Fragment() {
     //парсим данные по ближайшим датам
     private fun parseForecast(mainObject: JSONObject): List<WeatherNow> {
         val list = ArrayList<WeatherNow>()
-        val name = mainObject.getJSONObject("location").getString("name")
-        val daysArray = mainObject.getJSONObject("forecast")
-            .getJSONArray("forecastday")
-        for (i in 0 until daysArray.length()) {
-            val day = daysArray[i] as JSONObject
+        //val name = mainObject.getJSONObject("location").getString("name")
+        val days = mainObject.getJSONObject("daily")
+        val timeArr = days.getJSONArray("time")
+        val weatherCodeArr = days.getJSONArray("weathercode")
+        val temperatureMaxArr = days.getJSONArray("temperature_2m_max")
+        val temperatureMinArr = days.getJSONArray("temperature_2m_min")
+        //.getJSONArray("forecastday")
+        for (i in 0 until timeArr.length()) {
+            //val day = daysArray[i] as JSONObject
             val item = WeatherNow(
-                name,
-                day.getJSONObject("day").getString("avgtemp_c"),
-                day.getJSONObject("day").getJSONObject("condition").getString("text"),
-                day.getJSONObject("day").getJSONObject("condition").getString("icon"),
-                day.getString("date"),
-                day.getJSONObject("day").getString("mintemp_c"),
-                day.getJSONObject("day").getString("maxtemp_c"),
+                city,
+                "",
+                weatherCodeArr[i].toString(),
+                "",
+                timeArr[i].toString(),
+                temperatureMinArr[i].toString(),
+                temperatureMaxArr[i].toString(),
                 "", "", ""
             )
             list.add(item)
