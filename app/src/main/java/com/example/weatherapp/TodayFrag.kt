@@ -154,6 +154,19 @@ class TodayFrag : Fragment() {
             for (i in 0 until eng.size - 1) {
                 if (it.conditions.equals(eng[i])) {
                     binding.tvConditions.text = rus[i]
+                    when (it.conditions) {
+                        "0"-> binding.imToday.setImageResource(R.drawable.code0)
+                        "1", "2", "3" -> binding.imToday.setImageResource(R.drawable.code1)
+                        "45","48" -> binding.imToday.setImageResource(R.drawable.code45)
+                        "51","53","55" -> binding.imToday.setImageResource(R.drawable.code51)
+                        "56","57" -> binding.imToday.setImageResource(R.drawable.code56)
+                        "61","63","65" -> binding.imToday.setImageResource(R.drawable.code56)
+                        "66","67" -> binding.imToday.setImageResource(R.drawable.code66)
+                        "71","73","75","77" -> binding.imToday.setImageResource(R.drawable.code71)
+                        "80","81","82" -> binding.imToday.setImageResource(R.drawable.code80)
+                        "95","96","99" -> binding.imToday.setImageResource(R.drawable.code95)
+                    }
+
                 }
             }
             var wind = mainObj.getJSONObject("current_weather").getString("windspeed")
@@ -168,13 +181,14 @@ class TodayFrag : Fragment() {
                     binding.tvHum2.text = humArr[i].toString() + " %"
                     var pres = ((presArr[i].toString().toFloat() * 736.1) / 1000).toInt().toString()
                     binding.pressure.text = "Атмосферное давление: $pres мм рт.cт."
+                    //binding.imToday.setImageResource(R.drawable.code0)
                 }
             }
             //binding.tvConditions.text = it.conditions
             //Picasso.get().load("https:" + it.img).into(binding.imToday)
         }
     }
-
+    //Получение широты-долготы по названию города
     private fun geocoding(city: String){
         val geoUrl = "https://geocoding-api.open-meteo.com/v1/search?name=$city&count=1&language=ru"
         val queue = Volley.newRequestQueue(context)
@@ -184,8 +198,8 @@ class TodayFrag : Fragment() {
                 var geoObj = JSONObject(result)
                 latitude = geoObj.getJSONArray("results").getJSONObject(0).getString("latitude").toFloat()
                 longitude = geoObj.getJSONArray("results").getJSONObject(0).getString("longitude").toFloat()
-                Log.d("My","lat=$latitude and long=$longitude")
-                requestWeather(latitude,longitude)
+                //Log.d("My","lat=$latitude and long=$longitude")
+                requestWeather(latitude,longitude) //передаём полученные данные в функцию
             },
             { error ->                      // при ошибке показываем код ошибки
                 Toast.makeText(context, "Error \nTry again", Toast.LENGTH_SHORT).show()

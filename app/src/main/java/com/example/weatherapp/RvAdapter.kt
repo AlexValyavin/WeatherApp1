@@ -78,6 +78,18 @@ class RvAdapter : ListAdapter<WeatherNow,RvAdapter.Holder>(Comparator()) {
             for (i in 0 until eng.size-1){
                 if (item.conditions.equals(eng[i])){
                     binding.tvConditionSmall.text = rus[i]
+                    when (item.conditions) {
+                        "0"-> binding.ImConditionSmall.setImageResource(R.drawable.code0)
+                        "1", "2", "3" -> binding.ImConditionSmall.setImageResource(R.drawable.code1)
+                        "45","48" -> binding.ImConditionSmall.setImageResource(R.drawable.code45)
+                        "51","53","55" -> binding.ImConditionSmall.setImageResource(R.drawable.code51)
+                        "56","57" -> binding.ImConditionSmall.setImageResource(R.drawable.code56)
+                        "61","63","65" -> binding.ImConditionSmall.setImageResource(R.drawable.code56)
+                        "66","67" -> binding.ImConditionSmall.setImageResource(R.drawable.code66)
+                        "71","73","75","77" -> binding.ImConditionSmall.setImageResource(R.drawable.code71)
+                        "80","81","82" -> binding.ImConditionSmall.setImageResource(R.drawable.code80)
+                        "95","96","99" -> binding.ImConditionSmall.setImageResource(R.drawable.code95)
+                    }
                 }
             }
             //binding.tvConditionSmall.text = item.conditions
